@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.6.0" />
-    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.4.2" />
+    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.10.1" />
   </ItemGroup>
   
 </Project>
