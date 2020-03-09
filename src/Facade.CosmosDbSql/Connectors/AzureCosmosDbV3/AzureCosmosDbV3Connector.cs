@@ -74,21 +74,21 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
         public async Task<bool> CreateDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.CreateItemAsync<DocumentBase<T>>(item);
+            var response = await container.CreateItemAsync<dynamic>(item);
             return IsResponseValid(response.StatusCode);
         }
 
         public async Task<bool> UpdateDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.ReplaceItemAsync<DocumentBase<T>>(item, item.Id);
+            var response = await container.ReplaceItemAsync<dynamic>(item, item.Id);
             return IsResponseValid(response.StatusCode);
         }
 
         public async Task<bool> UpsertDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.UpsertItemAsync<DocumentBase<T>>(item);
+            var response = await container.UpsertItemAsync<dynamic>(item);
             return IsResponseValid(response.StatusCode);
         }
 
