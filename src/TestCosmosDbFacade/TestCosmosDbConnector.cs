@@ -33,11 +33,7 @@ namespace CosmosDbConnector.Tests
             // Arrange
             var collectionId = "test_collection_v2";
             var documentId = "1234";
-            var companies = new List<ICompany>
-            {
-                new CompanyBar("bar-name", "bar-value"),
-                new CompanyFoo("foo-name", 42),
-            };
+            var companies = GetCompanies();
             var document = new DocumentBase<IEnumerable<ICompany>>(documentId, PARTITION_KEY, companies);
 
             // Act
@@ -50,12 +46,7 @@ namespace CosmosDbConnector.Tests
                 "select * from c");
 
             // Assert
-            Assert.NotNull(responseDocuments);
-            Assert.Single(responseDocuments);
-            Assert.Equal(documentId, responseDocuments[0].Id);
-            Assert.Equal(2, responseDocuments[0].Document.Count());
-            Assert.Equal("bar-name", responseDocuments[0].Document.First()[nameof(ICompany.Name)]);
-            Assert.Equal("foo-name", responseDocuments[0].Document.Last()[nameof(ICompany.Name)]);
+            Asserts(responseDocuments, documentId);
         }
 
         [Fact]
@@ -64,11 +55,7 @@ namespace CosmosDbConnector.Tests
             // Arrange
             var collectionId = "test_collection_v3";
             var documentId = "9876";
-            var companies = new List<ICompany>
-            {
-                new CompanyBar("bar-name", "bar-value"),
-                new CompanyFoo("foo-name", 42),
-            };
+            var companies = GetCompanies();
             var document = new DocumentBase<IEnumerable<ICompany>>(documentId, PARTITION_KEY, companies);
 
             // Act
@@ -81,12 +68,30 @@ namespace CosmosDbConnector.Tests
                 "select * from c");
 
             // Assert
+            Asserts(responseDocuments, documentId);
+        }
+
+        private static List<ICompany> GetCompanies()
+        {
+            return new List<ICompany>
+            {
+                new CompanyBar("bar-name", "bar-value"),
+                new CompanyFoo("foo-name", 42),
+            };
+        }
+
+        private static void Asserts(List<DocumentBase<IEnumerable<JObject>>> responseDocuments, string documentId)
+        {
             Assert.NotNull(responseDocuments);
             Assert.Single(responseDocuments);
             Assert.Equal(documentId, responseDocuments[0].Id);
             Assert.Equal(2, responseDocuments[0].Document.Count());
-            Assert.Equal("bar-name", responseDocuments[0].Document.First()[nameof(ICompany.Name)]);
-            Assert.Equal("foo-name", responseDocuments[0].Document.Last()[nameof(ICompany.Name)]);
+            
+            Assert.Equal("bar-name", responseDocuments[0].Document.First()[nameof(CompanyBar.Name)]);
+            Assert.Equal("bar-value", responseDocuments[0].Document.First()[nameof(CompanyBar.BarValue)]);
+
+            Assert.Equal("foo-name", responseDocuments[0].Document.Last()[nameof(CompanyFoo.Name)]);
+            Assert.Equal(42, responseDocuments[0].Document.Last()[nameof(CompanyFoo.FooValue)]);
         }
 
         public void Dispose()

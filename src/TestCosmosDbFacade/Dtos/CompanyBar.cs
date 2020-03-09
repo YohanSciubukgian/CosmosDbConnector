@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace CosmosDbConnector.Tests.Dtos
+﻿namespace CosmosDbConnector.Tests.Dtos
 {
     public class CompanyBar : ICompany
     {
