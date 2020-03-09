@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Connector.CosmosDbSql.Connectors.AzureCosmosDbV2;
 using Connector.CosmosDbSql.Connectors.AzureCosmosDbV3;
 using Connector.CosmosDbSql.Documents;
 using CosmosDbConnector.Tests.Dtos;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace CosmosDbConnector.Tests
@@ -28,17 +31,20 @@ namespace CosmosDbConnector.Tests
         public async Task SampleTestV2()
         {
             // Arrange
-            string collectionId = "test_collection_v2";
+            var collectionId = "test_collection_v2";
             var documentId = "1234";
-            var companyName = "company v2";
-            var mock = new CompanyMock(companyName);
-            var document = new DocumentBase<ICompanyMock>(documentId, PARTITION_KEY, mock);
+            var companies = new List<ICompany>
+            {
+                new CompanyBar("bar-name", "bar-value"),
+                new CompanyFoo("foo-name", 42),
+            };
+            var document = new DocumentBase<IEnumerable<ICompany>>(documentId, PARTITION_KEY, companies);
 
             // Act
             await _azureCosmosDbV2Connector.CreateDatabaseIfNotExistsAsync(DATABASE_ID_V2, 400);
             await _azureCosmosDbV2Connector.CreateCollectionIfNotExistsAsync(DATABASE_ID_V2, collectionId, PARTITION_KEY);
             await _azureCosmosDbV2Connector.CreateDocumentAsync(DATABASE_ID_V2, collectionId, document);
-            var responseDocuments = await _azureCosmosDbV2Connector.SearchDocumentsAsync<DocumentBase<CompanyMock>>(
+            var responseDocuments = await _azureCosmosDbV2Connector.SearchDocumentsAsync<DocumentBase<IEnumerable<JObject>>>(
                 DATABASE_ID_V2,
                 collectionId,
                 "select * from c");
@@ -47,24 +53,29 @@ namespace CosmosDbConnector.Tests
             Assert.NotNull(responseDocuments);
             Assert.Single(responseDocuments);
             Assert.Equal(documentId, responseDocuments[0].Id);
-            Assert.Equal(companyName, responseDocuments[0].Document.Name);
+            Assert.Equal(2, responseDocuments[0].Document.Count());
+            Assert.Equal("bar-name", responseDocuments[0].Document.First()[nameof(ICompany.Name)]);
+            Assert.Equal("foo-name", responseDocuments[0].Document.Last()[nameof(ICompany.Name)]);
         }
 
         [Fact]
         public async Task SampleTestV3()
         {
             // Arrange
-            string collectionId = "test_collection_v3";
+            var collectionId = "test_collection_v3";
             var documentId = "9876";
-            var companyName = "company v3";
-            var mock = new CompanyMock(companyName);
-            var document = new DocumentBase<ICompanyMock>(documentId, PARTITION_KEY, mock);
+            var companies = new List<ICompany>
+            {
+                new CompanyBar("bar-name", "bar-value"),
+                new CompanyFoo("foo-name", 42),
+            };
+            var document = new DocumentBase<IEnumerable<ICompany>>(documentId, PARTITION_KEY, companies);
 
             // Act
             await _azureCosmosDbV3Connector.CreateDatabaseIfNotExistsAsync(DATABASE_ID_V3, 400);
             await _azureCosmosDbV3Connector.CreateCollectionIfNotExistsAsync(DATABASE_ID_V3, collectionId, PARTITION_KEY);
             await _azureCosmosDbV3Connector.CreateDocumentAsync(DATABASE_ID_V3, collectionId, document);
-            var responseDocuments = await _azureCosmosDbV3Connector.SearchDocumentsAsync<DocumentBase<CompanyMock>>(
+            var responseDocuments = await _azureCosmosDbV3Connector.SearchDocumentsAsync<DocumentBase<IEnumerable<JObject>>>(
                 DATABASE_ID_V3,
                 collectionId,
                 "select * from c");
@@ -73,7 +84,9 @@ namespace CosmosDbConnector.Tests
             Assert.NotNull(responseDocuments);
             Assert.Single(responseDocuments);
             Assert.Equal(documentId, responseDocuments[0].Id);
-            Assert.Equal(companyName, responseDocuments[0].Document.Name);
+            Assert.Equal(2, responseDocuments[0].Document.Count());
+            Assert.Equal("bar-name", responseDocuments[0].Document.First()[nameof(ICompany.Name)]);
+            Assert.Equal("foo-name", responseDocuments[0].Document.Last()[nameof(ICompany.Name)]);
         }
 
         public void Dispose()

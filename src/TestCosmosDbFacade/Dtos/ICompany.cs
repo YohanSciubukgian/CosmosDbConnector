@@ -1,6 +1,6 @@
 ﻿namespace CosmosDbConnector.Tests.Dtos
 {
-    public interface ICompanyMock
+    public interface ICompany
     {
         string Name { get; set; }
     }
