@@ -49,21 +49,21 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV2
             return IsResponseValid(response.StatusCode);
         }
 
-        public async Task<bool> CreateDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
+        public async Task<bool> CreateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var uri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
             var document = await _client.CreateDocumentAsync(uri, item, null, true);
             return IsResponseValid(document.StatusCode);
         }
 
-        public async Task<bool> UpdateDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
+        public async Task<bool> UpdateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var uri = UriFactory.CreateDocumentUri(databaseId, collectionId, item.Id);
             var response = await _client.ReplaceDocumentAsync(uri, item);
             return IsResponseValid(response.StatusCode);
         }
 
-        public async Task<bool> UpsertDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
+        public async Task<bool> UpsertItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var uri = UriFactory.CreateDocumentCollectionUri(databaseId, collectionId);
             var document = await _client.UpsertDocumentAsync(uri, item, null, true);

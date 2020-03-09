@@ -17,9 +17,9 @@ namespace Connector.CosmosDbSql.Connectors
             CosmosConsistencyLevel consistencyLevel = CosmosConsistencyLevel.Strong,
             CosmosIndexingMode indexingMode = CosmosIndexingMode.Consistent);
 
-        Task<bool> CreateDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item);
-        Task<bool> UpdateDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item);
-        Task<bool> UpsertDocumentAsync<T>(string databaseId, string collectionId, DocumentBase<T> item);
+        Task<bool> CreateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item);
+        Task<bool> UpdateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item);
+        Task<bool> UpsertItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item);
         Task<bool> DeleteItemAsync<T>(string databaseId, string collectionId, string id, string partitionKey = null);
 
         Task<bool> DeleteDatabaseIfExistsAsync(string databaseId);

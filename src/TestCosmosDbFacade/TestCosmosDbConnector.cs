@@ -39,7 +39,7 @@ namespace CosmosDbConnector.Tests
             // Act
             await _azureCosmosDbV2Connector.CreateDatabaseIfNotExistsAsync(DATABASE_ID_V2, 400);
             await _azureCosmosDbV2Connector.CreateCollectionIfNotExistsAsync(DATABASE_ID_V2, collectionId, PARTITION_KEY);
-            await _azureCosmosDbV2Connector.CreateDocumentAsync(DATABASE_ID_V2, collectionId, document);
+            await _azureCosmosDbV2Connector.CreateItemAsync(DATABASE_ID_V2, collectionId, document);
             var responseDocuments = await _azureCosmosDbV2Connector.SearchDocumentsAsync<DocumentBase<IEnumerable<JObject>>>(
                 DATABASE_ID_V2,
                 collectionId,
@@ -61,7 +61,7 @@ namespace CosmosDbConnector.Tests
             // Act
             await _azureCosmosDbV3Connector.CreateDatabaseIfNotExistsAsync(DATABASE_ID_V3, 400);
             await _azureCosmosDbV3Connector.CreateCollectionIfNotExistsAsync(DATABASE_ID_V3, collectionId, PARTITION_KEY);
-            await _azureCosmosDbV3Connector.CreateDocumentAsync(DATABASE_ID_V3, collectionId, document);
+            await _azureCosmosDbV3Connector.CreateItemAsync(DATABASE_ID_V3, collectionId, document);
             var responseDocuments = await _azureCosmosDbV3Connector.SearchDocumentsAsync<DocumentBase<IEnumerable<JObject>>>(
                 DATABASE_ID_V3,
                 collectionId,
