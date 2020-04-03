@@ -6,6 +6,8 @@ using Connector.CosmosDbSql.Connectors.AzureCosmosDbV2;
 using Connector.CosmosDbSql.Connectors.AzureCosmosDbV3;
 using Connector.CosmosDbSql.Documents;
 using CosmosDbConnector.Tests.Dtos;
+using CosmosDbConnector.Tests.Helpers;
+using CosmosDbConnector.Tests.Mocks.ComplexQuery;
 using Newtonsoft.Json.Linq;
 using Xunit;
 
@@ -28,10 +30,10 @@ namespace CosmosDbConnector.Tests
         }
 
         [Fact]
-        public async Task SampleTestV2()
+        public async Task SimpleQueryUsingSdkV2()
         {
             // Arrange
-            var collectionId = "test_collection_v2";
+            var collectionId = "test_simple_query_v2";
             var documentId = "1234";
             var companies = GetCompanies();
             var document = new DocumentBase<IEnumerable<ICompany>>(documentId, PARTITION_KEY, companies);
@@ -50,10 +52,10 @@ namespace CosmosDbConnector.Tests
         }
 
         [Fact]
-        public async Task SampleTestV3()
+        public async Task SimpleQueryUsingSdkV3()
         {
             // Arrange
-            var collectionId = "test_collection_v3";
+            var collectionId = "test_simple_query_v3";
             var documentId = "9876";
             var companies = GetCompanies();
             var document = new DocumentBase<IEnumerable<ICompany>>(documentId, PARTITION_KEY, companies);
@@ -71,6 +73,46 @@ namespace CosmosDbConnector.Tests
             Asserts(responseDocuments, documentId);
         }
 
+        [Fact]
+        public async Task ComplexQueryUsingSdkV3()
+        {
+            // Arrange
+            var collectionIdV3 = "test_complex_query_v3";
+            var companies = MockHelper.GetCompanyMocks(1000);
+            var query = GetComplexQuery();
+
+            // Act
+            await _azureCosmosDbV3Connector.CreateDatabaseIfNotExistsAsync(DATABASE_ID_V3, 10000);
+            await _azureCosmosDbV3Connector.CreateCollectionIfNotExistsAsync(DATABASE_ID_V3, collectionIdV3, PARTITION_KEY);
+            foreach (var company in companies)
+            {
+                await _azureCosmosDbV3Connector.CreateItemAsync(DATABASE_ID_V3, collectionIdV3, company);
+            }
+            var (responseDocumentsV3, requestChargeV3, responseDiagV3) = await _azureCosmosDbV3Connector.SearchDocumentsWithDiagnosticAsync<DocumentBase<CompanyResult>>(
+                DATABASE_ID_V3,
+                collectionIdV3,
+                query);
+
+            // This request should cost between 8 RU & 10 RU
+            Assert.InRange(requestChargeV3, 8, 10);
+        }
+
+        private static string GetComplexQuery()
+        {
+            var query = @$"
+                SELECT DISTINCT VALUE {{
+                    CompanyName : company.{nameof(Company.Name)},
+                    Countries : ARRAY(
+                        SELECT  VALUE address.{nameof(OfficeAddress.Country)} 
+                        FROM    address IN company.{nameof(Company.OfficeAddresses)} 
+                    )
+                }}
+                FROM    c.Document company
+                OFFSET 0 LIMIT 20";
+
+            return query;
+        }
+
         private static List<ICompany> GetCompanies()
         {
             return new List<ICompany>
@@ -86,7 +128,7 @@ namespace CosmosDbConnector.Tests
             Assert.Single(responseDocuments);
             Assert.Equal(documentId, responseDocuments[0].Id);
             Assert.Equal(2, responseDocuments[0].Document.Count());
-            
+
             Assert.Equal("bar-name", responseDocuments[0].Document.First()[nameof(CompanyBar.Name)]);
             Assert.Equal("bar-value", responseDocuments[0].Document.First()[nameof(CompanyBar.BarValue)]);
 
