@@ -15,9 +15,10 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
     {
         private readonly CosmosClient _client;
         private readonly JsonSerializerSettings _jsonSerializerSettings;
-
+        private readonly Dictionary<(string, string), Container> _containerByDatabaseIdAndContainerId;
         public AzureCosmosDbV3Connector(string endpoint, string key)
         {
+            _containerByDatabaseIdAndContainerId = new Dictionary<(string, string), Container>();
             _jsonSerializerSettings = new JsonSerializerSettings()
             {
                 DateParseHandling = DateParseHandling.DateTimeOffset,
@@ -73,21 +74,21 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
 
         public async Task<bool> CreateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
-            var container = _client.GetContainer(databaseId, collectionId);
+            var container = GetContainer(databaseId, collectionId);
             var response = await container.CreateItemAsync<dynamic>(item);
             return IsResponseValid(response.StatusCode);
         }
 
         public async Task<bool> UpdateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
-            var container = _client.GetContainer(databaseId, collectionId);
+            var container = GetContainer(databaseId, collectionId);
             var response = await container.ReplaceItemAsync<dynamic>(item, item.Id);
             return IsResponseValid(response.StatusCode);
         }
 
         public async Task<bool> UpsertItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
-            var container = _client.GetContainer(databaseId, collectionId);
+            var container = GetContainer(databaseId, collectionId);
             var response = await container.UpsertItemAsync<dynamic>(item);
             return IsResponseValid(response.StatusCode);
         }
@@ -99,7 +100,7 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
                 throw new ArgumentNullException(nameof(partitionKey));
             }
 
-            var container = _client.GetContainer(databaseId, collectionId);
+            var container = GetContainer(databaseId, collectionId);
             var response = await container.DeleteItemAsync<T>(id, new PartitionKey(partitionKey), null, default(CancellationToken));
             return IsResponseValid(response.StatusCode);
         }
@@ -111,7 +112,7 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
             Dictionary<string, object> parameters = null)
         {
             var queryRequestOptions = GetQueryRequestOptions();
-            var container = _client.GetContainer(databaseId, collectionId);
+            var container = GetContainer(databaseId, collectionId);
             var queryDefinition = GetQueryDefinition(query, parameters);
             var feedIterator = container.GetItemQueryStreamIterator(queryDefinition, null, queryRequestOptions);
 
@@ -162,7 +163,7 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
                 return true;
             }
             
-            var container = _client.GetContainer(databaseId, collectionId);
+            var container = GetContainer(databaseId, collectionId);
             var response = await container.DeleteContainerAsync();
             return IsResponseValid(response.StatusCode);
         }
@@ -170,6 +171,17 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
         public void Dispose()
         {
             _client?.Dispose();
+        }
+
+        private Container GetContainer(string databaseId, string containerId)
+        {
+            if (!_containerByDatabaseIdAndContainerId.TryGetValue((databaseId, containerId), out var container))
+            {
+                container = _client.GetContainer(databaseId, containerId);
+                _containerByDatabaseIdAndContainerId.Add((databaseId, containerId), container);
+            }
+
+            return container;
         }
 
         private async Task<bool> IsDatabaseExist(string databaseId)
