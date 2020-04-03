@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -104,11 +105,31 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
             return IsResponseValid(response.StatusCode);
         }
 
+        public Task<(List<T> documents, double requestCharge, List<string> responseDiagnostics)> SearchDocumentsWithDiagnosticAsync<T>(
+            string databaseId,
+            string collectionId,
+            string query,
+            Dictionary<string, object> parameters)
+        {
+            return SearchDocumentsAsync<T>(databaseId, collectionId, query, parameters, true);
+        }
+
         public async Task<List<T>> SearchDocumentsAsync<T>(
             string databaseId,
             string collectionId,
             string query,
             Dictionary<string, object> parameters = null)
+        {
+            var (documents, _, _) = await SearchDocumentsAsync<T>(databaseId, collectionId, query, parameters, false);
+            return documents;
+        }
+
+        private async Task<(List<T> documents, double requestCharge, List<string> responseDiagnostics)> SearchDocumentsAsync<T>(
+            string databaseId,
+            string collectionId,
+            string query,
+            Dictionary<string, object> parameters,
+            bool includeDiagnostics)
         {
             var queryRequestOptions = GetQueryRequestOptions();
             var container = _client.GetContainer(databaseId, collectionId);
@@ -116,6 +137,8 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
             var feedIterator = container.GetItemQueryStreamIterator(queryDefinition, null, queryRequestOptions);
 
             var list = new List<T>();
+            var responseHeaders = includeDiagnostics ? new List<Headers>() : default;
+            var responseDiagnotics = includeDiagnostics ? new List<string>() : default;
             while (feedIterator.HasMoreResults)
             {
                 using (var response = await feedIterator.ReadNextAsync())
@@ -125,6 +148,14 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
                         continue;
                     }
 
+                    // Store Diagnostics
+                    if (includeDiagnostics)
+                    {
+                        responseHeaders.Add(response.Headers);
+                        responseDiagnotics.Add(response.Diagnostics.ToString());
+                    }
+
+                    // Read Content Stream
                     var stream = response.Content;
                     using (var reader = new StreamReader(stream))
                     {
@@ -138,7 +169,8 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
                 }
             }
 
-            return list;
+            var requestCharge = responseHeaders?.Sum(z => z.RequestCharge) ?? default;
+            return (list, requestCharge, responseDiagnotics);
         }
 
         public async Task<bool> DeleteDatabaseIfExistsAsync(string databaseId)
