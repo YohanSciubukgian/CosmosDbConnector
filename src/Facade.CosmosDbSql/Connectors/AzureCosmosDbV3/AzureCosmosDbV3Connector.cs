@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Connector.CosmosDbSql.Documents;
@@ -75,22 +76,34 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
         public async Task<bool> CreateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.CreateItemAsync<dynamic>(item);
-            return IsResponseValid(response.StatusCode);
+            var bytes = Serialize(item);
+            using (var streamPayload = new MemoryStream(bytes))
+            {
+                var response = await container.CreateItemStreamAsync(streamPayload, new PartitionKey(item.Key));
+                return IsResponseValid(response.StatusCode);
+            }
         }
 
         public async Task<bool> UpdateItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.ReplaceItemAsync<dynamic>(item, item.Id);
-            return IsResponseValid(response.StatusCode);
+            var bytes = Serialize(item);
+            using (var streamPayload = new MemoryStream(bytes))
+            {
+                var response = await container.ReplaceItemStreamAsync(streamPayload, item.Id, new PartitionKey(item.Key));
+                return IsResponseValid(response.StatusCode);
+            }
         }
 
         public async Task<bool> UpsertItemAsync<T>(string databaseId, string collectionId, DocumentBase<T> item)
         {
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.UpsertItemAsync<dynamic>(item);
-            return IsResponseValid(response.StatusCode);
+            var bytes = Serialize(item);
+            using (var streamPayload = new MemoryStream(bytes))
+            {
+                var response = await container.UpsertItemStreamAsync(streamPayload, new PartitionKey(item.Key));
+                return IsResponseValid(response.StatusCode);
+            }
         }
 
         public async Task<bool> DeleteItemAsync<T>(string databaseId, string collectionId, string id, string partitionKey)
@@ -101,7 +114,7 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
             }
 
             var container = _client.GetContainer(databaseId, collectionId);
-            var response = await container.DeleteItemAsync<T>(id, new PartitionKey(partitionKey), null, default(CancellationToken));
+            var response = await container.DeleteItemStreamAsync(id, new PartitionKey(partitionKey), null, default(CancellationToken));
             return IsResponseValid(response.StatusCode);
         }
 
@@ -193,7 +206,7 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
             {
                 return true;
             }
-            
+
             var container = _client.GetContainer(databaseId, collectionId);
             var response = await container.DeleteContainerAsync();
             return IsResponseValid(response.StatusCode);
@@ -202,6 +215,12 @@ namespace Connector.CosmosDbSql.Connectors.AzureCosmosDbV3
         public void Dispose()
         {
             _client?.Dispose();
+        }
+
+        private byte[] Serialize<T>(T item)
+        {
+            var json = JsonConvert.SerializeObject(item);
+            return Encoding.UTF8.GetBytes(json);
         }
 
         private async Task<bool> IsDatabaseExist(string databaseId)
